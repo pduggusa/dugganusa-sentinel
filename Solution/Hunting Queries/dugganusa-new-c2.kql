@@ -1,0 +1,10 @@
+// DugganUSA New C2 Detection — alert on connections to newly-indexed C2 infrastructure
+ThreatIntelligenceIndicator
+| where SourceSystem == "DugganUSA-STIX-Feed"
+| where TimeGenerated > ago(6h)
+| where ThreatType == "c2"
+| join kind=inner (
+    CommonSecurityLog
+    | where TimeGenerated > ago(24h)
+) on $left.NetworkIP == $right.DestinationIP
+| project TimeGenerated, SourceIP, DestinationIP, ThreatType, Description, Confidence

@@ -1,0 +1,54 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "title": "DugganUSA Threat Intelligence",
+    "description": "Connect Microsoft Sentinel to the DugganUSA STIX 2.1 threat intelligence feed. 1,080,000+ IOCs from 275+ organizations across 46 countries.",
+    "provider": "DugganUSA LLC",
+    "categories": ["Security - Threat Intelligence"]
+  },
+  "parameters": {
+    "workspaceName": {
+      "type": "string",
+      "metadata": { "description": "Log Analytics workspace name" }
+    },
+    "apiKey": {
+      "type": "securestring",
+      "defaultValue": "",
+      "metadata": { "description": "DugganUSA API key (optional — free tier works without one). Get one at https://analytics.dugganusa.com/stix/register" }
+    },
+    "pollingFrequency": {
+      "type": "string",
+      "defaultValue": "1",
+      "allowedValues": ["1", "6", "12", "24"],
+      "metadata": { "description": "Polling frequency in hours" }
+    }
+  },
+  "variables": {
+    "taxiiServer": "https://analytics.dugganusa.com/api/v1/stix-feed/taxii2",
+    "collectionId": "dugganusa-threats",
+    "friendlyName": "DugganUSA-STIX-Feed"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.OperationalInsights/workspaces/providers/dataConnectors",
+      "apiVersion": "2023-02-01",
+      "name": "[concat(parameters('workspaceName'), '/Microsoft.SecurityInsights/', variables('friendlyName'))]",
+      "kind": "ThreatIntelligenceTaxii",
+      "properties": {
+        "tenantId": "[subscription().tenantId]",
+        "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]",
+        "friendlyName": "[variables('friendlyName')]",
+        "taxiiServer": "[variables('taxiiServer')]",
+        "collectionId": "[variables('collectionId')]",
+        "userName": "api-key",
+        "password": "[parameters('apiKey')]",
+        "pollingFrequency": "[parameters('pollingFrequency')]",
+        "taxiiLookbackPeriod": "1970-01-01T00:00:00.000Z",
+        "dataTypes": {
+          "taxiiClient": { "state": "Enabled" }
+        }
+      }
+    }
+  ]
+}
