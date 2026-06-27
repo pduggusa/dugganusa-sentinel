@@ -1,9 +1,9 @@
 {
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
-  "contentVersion": "1.0.0.0",
+  "contentVersion": "1.2.0.0",
   "metadata": {
     "title": "DugganUSA Threat Intelligence",
-    "description": "Connect Microsoft Sentinel to the DugganUSA STIX 2.1 threat intelligence feed. 1,080,000+ IOCs from 275+ organizations across 46 countries.",
+    "description": "Connect Microsoft Sentinel to the DugganUSA STIX 2.1 threat intelligence feed. 1.10M+ IOCs from 275+ organizations across 46 countries.",
     "provider": "DugganUSA LLC",
     "categories": ["Security - Threat Intelligence"]
   },
@@ -14,8 +14,7 @@
     },
     "apiKey": {
       "type": "securestring",
-      "defaultValue": "",
-      "metadata": { "description": "DugganUSA API key (optional — free tier works without one). Get one at https://analytics.dugganusa.com/stix/register" }
+      "metadata": { "description": "DugganUSA API key (required — the feed rejects anonymous requests). Register a free key at https://analytics.dugganusa.com/stix/register" }
     },
     "pollingFrequency": {
       "type": "string",

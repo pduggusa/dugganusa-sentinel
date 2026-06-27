@@ -1,6 +1,18 @@
 # DugganUSA Microsoft Sentinel Connector
 
-**Ingest 1M+ threat indicators into Microsoft Sentinel via TAXII 2.1. One-click deploy.**
+**Ingest 1.10M+ threat indicators into Microsoft Sentinel via TAXII 2.1. One-click deploy.**
+
+## What's New in 1.2.0
+
+The DugganUSA feed now exposes **three live, no-auth validation endpoints** so your SecOps team can independently verify feed quality before operationalizing it. They are durable across our platform deploys and each response carries a `source` field (`live` | `durable` | `baseline`):
+
+- **Novelty** — [`/api/v1/feed-uniqueness`](https://analytics.dugganusa.com/api/v1/feed-uniqueness): ~75%+ of our independently-sourced IOCs are **not** in ThreatFox.
+- **Timeliness** — [`/api/v1/kev-lead`](https://analytics.dugganusa.com/api/v1/kev-lead): we flag exploited CVEs roughly **31 days ahead of CISA KEV** on average.
+- **Accuracy** — [`/api/v1/spamhaus-validation`](https://analytics.dugganusa.com/api/v1/spamhaus-validation): Spamhaus independently corroborates our first-hand contributions.
+
+Feed depth also grew with **OSV malicious-package feeds (npm + PyPI)** and **daily GitHub Hunt detections**, drawn from 15 external feed sources plus our own first-hand telemetry.
+
+> **Important:** the TAXII feed is now **API-key-enforced**. Anonymous requests return `401`; unregistered keys return `429`. The free tier is a **free registered key** — [register here](https://analytics.dugganusa.com/stix/register) before deploying.
 
 ## Deploy
 
@@ -28,7 +40,7 @@ az deployment group create \
 ```
 Server:     https://analytics.dugganusa.com/api/v1/stix-feed/taxii2
 Collection: dugganusa-threats
-Auth:       api-key / dugusa_YOUR_KEY (or blank for free tier)
+Auth:       api-key / dugusa_YOUR_KEY (registered key required)
 ```
 
 ## Included Hunting Queries
@@ -38,7 +50,7 @@ Auth:       api-key / dugusa_YOUR_KEY (or blank for free tier)
 
 ## Free API Key
 
-[analytics.dugganusa.com/stix/register](https://analytics.dugganusa.com/stix/register) — works without one at reduced limits.
+A registered key is required — the feed rejects anonymous requests. Register a free key (500 queries/day) at [analytics.dugganusa.com/stix/register](https://analytics.dugganusa.com/stix/register).
 
 ## Part of the DugganUSA Ecosystem
 
