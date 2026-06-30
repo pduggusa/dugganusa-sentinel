@@ -2,6 +2,12 @@
 
 All notable changes to the DugganUSA Microsoft Sentinel Connector are documented here.
 
+## [1.3.0] - 2026-06-30
+
+### Added
+- **Feed-efficacy hit reporting (liveness loop)** — new playbook `Solution/Playbooks/dugganusa-report-hit/azuredeploy.json` (Logic App, ARM). On a Microsoft Sentinel incident it extracts IP and URL indicator entities and POSTs them to `POST /api/v1/feed/hit` (`consumer_kind: 'sentinel'`), closing the Liveness validation axis (`/api/v1/feed-efficacy`). Feed key is a `securestring` parameter; the Sentinel connection uses managed identity.
+- **Privacy contract:** the playbook maps ONLY indicator entity values (IP `Address` / URL `Url`) into the report — never Account, Host, Mailbox, or any victim-side entity. (The platform also drops any victim-side field server-side.)
+
 ## [1.2.1] - 2026-06-30
 
 ### Added

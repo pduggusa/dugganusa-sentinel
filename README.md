@@ -2,7 +2,9 @@
 
 **Ingest 1.5M+ threat indicators into Microsoft Sentinel via TAXII 2.1. One-click deploy.**
 
-## What's New in 1.2.1
+## What's New in 1.3.0
+
+**The liveness loop is now wired** — new Logic App playbook `dugganusa-report-hit` reports matched indicator entities back to the feed-efficacy axis. See [Reporting hits (liveness axis)](#reporting-hits-liveness-axis) below.
 
 The DugganUSA feed now exposes **four live, no-auth validation endpoints** so your SecOps team can independently verify feed quality before operationalizing it. They are durable across our platform deploys and each response carries a `source` field (`live` | `durable` | `baseline`):
 
@@ -11,7 +13,7 @@ The DugganUSA feed now exposes **four live, no-auth validation endpoints** so yo
 - **Accuracy** — [`/api/v1/spamhaus-validation`](https://analytics.dugganusa.com/api/v1/spamhaus-validation): Spamhaus independently corroborates our first-hand contributions.
 - **Liveness** — [`/api/v1/feed-efficacy`](https://analytics.dugganusa.com/api/v1/feed-efficacy): opt-in consumer reports of when our indicators actually fire on real traffic — proof the feed is operationally live, not just large.
 
-As a feed consumer, you can opt in to the liveness axis by reporting hits to `POST /api/v1/feed/hit` — privacy-preserving, only the matched indicator is sent, never victim data.
+As a feed consumer, you can report hits to the liveness axis with the included `dugganusa-report-hit` playbook (see below) — privacy-preserving, only the matched indicator is sent, never victim data.
 
 Feed depth also grew with **OSV malicious-package feeds (npm + PyPI)** and **daily GitHub Hunt detections**, drawn from 15 external feed sources plus our own first-hand telemetry.
 
@@ -50,6 +52,21 @@ Auth:       api-key / dugusa_YOUR_KEY (registered key required)
 
 - `dugganusa-ioc-match.kql` — correlate firewall/proxy logs against DugganUSA IOCs
 - `dugganusa-new-c2.kql` — alert on connections to newly-indexed C2 infrastructure
+
+## Reporting hits (liveness axis)
+
+The playbook **`Solution/Playbooks/dugganusa-report-hit/azuredeploy.json`** closes the **Liveness** axis. Deploy it as a Microsoft Sentinel automation playbook (Logic App), then attach it to an analytics rule (or run it on-demand from an incident). On an incident it extracts the IP and URL indicator entities and POSTs them to `POST /api/v1/feed/hit` (`consumer_kind: sentinel`).
+
+```bash
+az deployment group create \
+  --resource-group YOUR_RG \
+  --template-file "Solution/Playbooks/dugganusa-report-hit/azuredeploy.json" \
+  --parameters DugganUSAFeedKey=dugusa_YOUR_KEY
+```
+
+The feed key is a `securestring` parameter; the Sentinel connection authenticates with the playbook's managed identity.
+
+**Privacy:** the playbook maps **only** indicator entity values (IP `Address`, URL `Url`) into the report — never Account, Host, Mailbox, or any victim-side entity.
 
 ## Free API Key
 
