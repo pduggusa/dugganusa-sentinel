@@ -1,14 +1,17 @@
 # DugganUSA Microsoft Sentinel Connector
 
-**Ingest 1.10M+ threat indicators into Microsoft Sentinel via TAXII 2.1. One-click deploy.**
+**Ingest 1.5M+ threat indicators into Microsoft Sentinel via TAXII 2.1. One-click deploy.**
 
-## What's New in 1.2.0
+## What's New in 1.2.1
 
-The DugganUSA feed now exposes **three live, no-auth validation endpoints** so your SecOps team can independently verify feed quality before operationalizing it. They are durable across our platform deploys and each response carries a `source` field (`live` | `durable` | `baseline`):
+The DugganUSA feed now exposes **four live, no-auth validation endpoints** so your SecOps team can independently verify feed quality before operationalizing it. They are durable across our platform deploys and each response carries a `source` field (`live` | `durable` | `baseline`):
 
 - **Novelty** — [`/api/v1/feed-uniqueness`](https://analytics.dugganusa.com/api/v1/feed-uniqueness): ~75%+ of our independently-sourced IOCs are **not** in ThreatFox.
-- **Timeliness** — [`/api/v1/kev-lead`](https://analytics.dugganusa.com/api/v1/kev-lead): we flag exploited CVEs roughly **31 days ahead of CISA KEV** on average.
+- **Timeliness** — [`/api/v1/kev-lead`](https://analytics.dugganusa.com/api/v1/kev-lead): a live ledger of how far ahead of CISA KEV we flagged each exploited CVE — positive leads, same-day, and no-receipt all shown honestly, with receipts.
 - **Accuracy** — [`/api/v1/spamhaus-validation`](https://analytics.dugganusa.com/api/v1/spamhaus-validation): Spamhaus independently corroborates our first-hand contributions.
+- **Liveness** — [`/api/v1/feed-efficacy`](https://analytics.dugganusa.com/api/v1/feed-efficacy): opt-in consumer reports of when our indicators actually fire on real traffic — proof the feed is operationally live, not just large.
+
+As a feed consumer, you can opt in to the liveness axis by reporting hits to `POST /api/v1/feed/hit` — privacy-preserving, only the matched indicator is sent, never victim data.
 
 Feed depth also grew with **OSV malicious-package feeds (npm + PyPI)** and **daily GitHub Hunt detections**, drawn from 15 external feed sources plus our own first-hand telemetry.
 
