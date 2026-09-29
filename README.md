@@ -1,6 +1,6 @@
 # DugganUSA Microsoft Sentinel Connector
 
-**Ingest 1.5M+ threat indicators into Microsoft Sentinel via TAXII 2.1. One-click deploy.**
+**Ingest 1.9M+ threat indicators into Microsoft Sentinel via TAXII 2.1. One-click deploy.**
 
 ## What's New in 1.3.0
 

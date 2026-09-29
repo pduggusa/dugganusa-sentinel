@@ -3,7 +3,7 @@
   "contentVersion": "1.2.1.0",
   "metadata": {
     "title": "DugganUSA Threat Intelligence",
-    "description": "Connect Microsoft Sentinel to the DugganUSA STIX 2.1 threat intelligence feed. 1.5M+ IOCs from 275+ organizations across 46 countries.",
+    "description": "Connect Microsoft Sentinel to the DugganUSA STIX 2.1 threat intelligence feed. 1.9M+ IOCs.",
     "provider": "DugganUSA LLC",
     "categories": ["Security - Threat Intelligence"]
   },
