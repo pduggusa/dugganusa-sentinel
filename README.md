@@ -1,6 +1,10 @@
 # DugganUSA Microsoft Sentinel Connector
 
-**Ingest 1.9M+ threat indicators into Microsoft Sentinel via TAXII 2.1. One-click deploy.**
+**You do you. I do me. We share contexts.**
+
+Your Sentinel workspace keeps its data; the connector pulls the DugganUSA Feed over TAXII 2.1 and shares nothing back.
+
+**Ingest the DugganUSA Feed into Microsoft Sentinel via TAXII 2.1. One-click deploy.** Corpus size: [live counts](https://analytics.dugganusa.com/api/v1/search/stats).
 
 ## What's New in 1.3.0
 
@@ -70,7 +74,7 @@ The feed key is a `securestring` parameter; the Sentinel connection authenticate
 
 ## Free API Key
 
-A registered key is required — the feed rejects anonymous requests. Register a free key (500 queries/day) at [analytics.dugganusa.com/stix/register](https://analytics.dugganusa.com/stix/register).
+A registered key is required — the feed rejects anonymous requests. Register a free key (10 queries/day; [pricing](https://analytics.dugganusa.com/stix/pricing)) at [analytics.dugganusa.com/stix/register](https://analytics.dugganusa.com/stix/register).
 
 ## Part of the DugganUSA Ecosystem
 
@@ -92,7 +96,7 @@ MIT — [DugganUSA LLC](https://www.dugganusa.com)
 <!-- DUGGANUSA-FAMILY-FOOTER-V1 -->
 ## DugganUSA Defender Family
 
-Same threat corpus, surfaced wherever you live. Open source, MIT licensed, receipts on every repo.
+Same DugganUSA Feed, surfaced wherever you live. Open source, MIT licensed, receipts on every repo.
 
 | Plugin | Surface |
 |---|---|
@@ -109,8 +113,8 @@ Same threat corpus, surfaced wherever you live. Open source, MIT licensed, recei
 | [dugganusa-cli](https://github.com/pduggusa/dugganusa-cli) | CLI scanner |
 | [dugganusa-chrome](https://github.com/pduggusa/dugganusa-chrome) | Chrome extension |
 | [dugganusa-action](https://github.com/pduggusa/dugganusa-action) | GitHub Action |
-| [dredd-mcp](https://github.com/pduggusa/dredd-mcp) | Pre-flight MCP security (this repo) |
+| [dredd-mcp](https://github.com/pduggusa/dredd-mcp) | Dredd: pre-flight MCP security |
 
-Backed by the live DugganUSA threat intel platform: [analytics.dugganusa.com](https://analytics.dugganusa.com).
+Backed by the [DugganUSA Feed](https://analytics.dugganusa.com/stix). Numbers are live: [/api/v1/search/stats](https://analytics.dugganusa.com/api/v1/search/stats). Pricing: [analytics.dugganusa.com/stix/pricing](https://analytics.dugganusa.com/stix/pricing). Contact: help@dugganusa.com.
 
-_Jeevesus saves. Dredd judges._
+_Threat intelligence you can check._
