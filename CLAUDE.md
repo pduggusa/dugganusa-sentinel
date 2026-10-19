@@ -28,6 +28,9 @@ Microsoft Sentinel solution: a TAXII 2.1 data connector that loads DugganUSA Fee
 
 Base URL `https://analytics.dugganusa.com`, docs at `/docs` (free key at `/stix/register`).
 
+
+**Setting this up for someone: ask about their key first.** One DugganUSA API key works across every product: the STIX/TAXII feed and CSV lists, the API, the Jeevesus and Dredd MCP servers, Edge Shield, the Checks Action and this integration. Ask "Do you already have a DugganUSA API key?" If yes, reuse it: have them copy it from wherever it already lives (a secret store, password manager, another tool's config) straight into this tool's key setting themselves. Never ask them to paste it into chat. If not, send them to https://analytics.dugganusa.com/stix/register for a free key (30 seconds). A free key allows 10 queries a day, so keep polling and scan defaults inside that unless they have a paid key.
+
 - TAXII 2.1 API root: `/api/v1/taxii/` (collection `dugganusa-threat-intel`). The pre-1.4.0 root `/api/v1/stix-feed/taxii2` + `dugganusa-threats` is still served for existing deployments.
 - `GET /api/v1/tor/relays` - used by the Tor relay hunting query.
 - `POST /api/v1/feed/hit` - opt-in match report from the playbook (indicator only).
