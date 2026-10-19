@@ -4,19 +4,15 @@
 // Data source: DugganUSA Tor Infrastructure Attribution Framework
 // API: https://analytics.dugganusa.com/api/v1/tor/relays
 //
-// Instructions:
-// 1. Populate the TorRelayIPs watchlist from DugganUSA API:
-//    GET /api/v1/tor/relays?isExit=true&limit=500
-// 2. Or use the _GetWatchlist function if configured as an Azure Sentinel watchlist.
-// 3. Run this query to find connections to/from Tor exit nodes.
-
-// Option A: Inline known exit relay IPs (update periodically via Logic App or manual pull)
-let TorExitRelays = externaldata(address: string, nickname: string, country: string, asnOrg: string, bandwidth: int, isExit: bool)
-    [@"https://analytics.dugganusa.com/api/v1/tor/relays?isExit=true&limit=500&format=csv"]
-    with (format="csv", ignoreFirstRecord=true);
-
-// Option B: If using a Sentinel Watchlist named "DugganUSA_TorRelays"
-// let TorExitRelays = _GetWatchlist('DugganUSA_TorRelays');
+// Setup: create a Sentinel watchlist named "DugganUSA_TorRelays" (search key: address) from
+//   GET https://analytics.dugganusa.com/api/v1/tor/relays?isExit=true&limit=500&format=csv
+// sent with your API key in the Authorization header (Bearer). Refresh it on a schedule (Logic App)
+// or by hand. KQL externaldata() cannot send that header, so this query reads the watchlist.
+// (Until 1.4.0 this query used externaldata() against the anonymous URL; anonymous access was
+// disabled, so it silently returned nothing.)
+let TorExitRelays = _GetWatchlist('DugganUSA_TorRelays')
+    | project address = tostring(column_ifexists('SearchKey', '')), nickname = tostring(column_ifexists('nickname', '')),
+              country = tostring(column_ifexists('country', '')), asnOrg = tostring(column_ifexists('asnOrg', ''));
 
 // Match against CommonSecurityLog (firewall/proxy logs)
 CommonSecurityLog

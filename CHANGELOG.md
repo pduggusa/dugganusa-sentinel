@@ -2,6 +2,16 @@
 
 All notable changes to the DugganUSA Microsoft Sentinel Connector are documented here.
 
+## [1.4.0] - 2026-10-19
+
+### Fixed (found by deploying into DugganUSA's own Sentinel workspace)
+- Template API root/collection: `/api/v1/stix-feed/taxii2` + `dugganusa-threats` returned 404 for `{root}/collections/{id}/objects/`, so one-click deployments imported nothing. Now `/api/v1/taxii/` + `dugganusa-threat-intel`. The old path is served server-side too, so connectors set up by hand with the old values keep working. (No connector was ever created from the old template: see the next item.)
+- `dugganusa-ioc-match.kql` and `dugganusa-new-c2.kql` read `ThreatIntelligenceIndicator`, which Sentinel no longer populates for TAXII indicators (0 rows; new-c2 also failed with a semantic error). Rewritten on `ThreatIntelIndicators`; both matched synthetic rows built from live indicators.
+- `dugganusa-tor-relay-match.kql` used `externaldata()` against an endpoint that now requires a key (silent 0 rows). Now reads a watchlist.
+- The Deploy to Azure template itself failed ("Connector kind 'ThreatIntelligenceTaxii' is not supported in api-version '2020-01-01'"). Rewritten on Microsoft.SecurityInsights/dataConnectors (workspace scope), workspace id resolved automatically, polling OnceADay / 7-day import by default (free-tier safe), and the hunting queries installed as saved searches in the same deployment.
+- New hunting query `dugganusa-what-arrived.kql`: indicators by type, newest arrival, max confidence.
+- README: CLI example no longer puts the key on the command line; table name and endpoint corrected.
+
 ## [1.3.1] - 2026-09-29
 
 ### Changed

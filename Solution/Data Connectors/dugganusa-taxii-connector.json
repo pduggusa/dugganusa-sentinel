@@ -1,53 +1,144 @@
 {
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
-  "contentVersion": "1.2.1.0",
+  "contentVersion": "1.4.0.0",
   "metadata": {
-    "title": "DugganUSA Threat Intelligence",
-    "description": "Connect Microsoft Sentinel to the DugganUSA STIX 2.1 threat intelligence feed. 1.9M+ IOCs.",
+    "title": "DugganUSA Threat Intelligence for Microsoft Sentinel",
+    "description": "One deployment: the DugganUSA TAXII 2.1 connector plus hunting queries. Needs a Sentinel-enabled workspace and a DugganUSA API key (free at https://analytics.dugganusa.com/stix/register).",
     "provider": "DugganUSA LLC",
-    "categories": ["Security - Threat Intelligence"]
+    "categories": [
+      "Security - Threat Intelligence"
+    ]
   },
   "parameters": {
     "workspaceName": {
       "type": "string",
-      "metadata": { "description": "Log Analytics workspace name" }
+      "metadata": {
+        "description": "Your Microsoft Sentinel (Log Analytics) workspace name, in this resource group"
+      }
     },
     "apiKey": {
       "type": "securestring",
-      "metadata": { "description": "DugganUSA API key (required — the feed rejects anonymous requests). Register a free key at https://analytics.dugganusa.com/stix/register" }
+      "metadata": {
+        "description": "Your DugganUSA API key. Free: https://analytics.dugganusa.com/stix/register"
+      }
     },
     "pollingFrequency": {
       "type": "string",
-      "defaultValue": "1",
-      "allowedValues": ["1", "6", "12", "24"],
-      "metadata": { "description": "Polling frequency in hours" }
+      "defaultValue": "OnceADay",
+      "allowedValues": [
+        "OnceADay",
+        "OnceAnHour"
+      ],
+      "metadata": {
+        "description": "OnceADay fits the free tier (10 queries a day). Choose OnceAnHour with a paid key."
+      }
+    },
+    "importFrom": {
+      "type": "string",
+      "defaultValue": "[dateTimeAdd(utcNow(), '-P7D')]",
+      "metadata": {
+        "description": "Import indicators added after this time (default: the last 7 days). Older indicators are mostly stale."
+      }
     }
   },
   "variables": {
-    "taxiiServer": "https://analytics.dugganusa.com/api/v1/stix-feed/taxii2",
-    "collectionId": "dugganusa-threats",
-    "friendlyName": "DugganUSA-STIX-Feed"
+    "taxiiServer": "https://analytics.dugganusa.com/api/v1/taxii/",
+    "collectionId": "dugganusa-threat-intel",
+    "friendlyName": "DugganUSA-STIX-Feed",
+    "workspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]"
   },
   "resources": [
     {
-      "type": "Microsoft.OperationalInsights/workspaces/providers/dataConnectors",
-      "apiVersion": "2023-02-01",
-      "name": "[concat(parameters('workspaceName'), '/Microsoft.SecurityInsights/', variables('friendlyName'))]",
+      "type": "Microsoft.SecurityInsights/dataConnectors",
+      "apiVersion": "2024-10-01-preview",
+      "scope": "[concat('Microsoft.OperationalInsights/workspaces/', parameters('workspaceName'))]",
+      "name": "[guid(variables('workspaceResourceId'), 'dugganusa-taxii')]",
       "kind": "ThreatIntelligenceTaxii",
       "properties": {
         "tenantId": "[subscription().tenantId]",
-        "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]",
+        "workspaceId": "[reference(variables('workspaceResourceId'), '2022-10-01').customerId]",
         "friendlyName": "[variables('friendlyName')]",
         "taxiiServer": "[variables('taxiiServer')]",
         "collectionId": "[variables('collectionId')]",
-        "userName": "api-key",
+        "userName": "dugganusa",
         "password": "[parameters('apiKey')]",
         "pollingFrequency": "[parameters('pollingFrequency')]",
-        "taxiiLookbackPeriod": "1970-01-01T00:00:00.000Z",
+        "taxiiLookbackPeriod": "[parameters('importFrom')]",
         "dataTypes": {
-          "taxiiClient": { "state": "Enabled" }
+          "taxiiClient": {
+            "state": "Enabled"
+          }
         }
       }
+    },
+    {
+      "type": "Microsoft.OperationalInsights/workspaces/savedSearches",
+      "apiVersion": "2020-08-01",
+      "name": "[concat(parameters('workspaceName'), '/dugganusa-what-arrived')]",
+      "properties": {
+        "category": "Hunting Queries",
+        "displayName": "DugganUSA - What arrived (feed health)",
+        "query": "// DugganUSA: what arrived. Run this after connecting to see the feed is live in your workspace.\n// Counts DugganUSA indicators by type, with their newest arrival and highest confidence (never above 95).\nThreatIntelIndicators\n| where TimeGenerated > ago(30d)\n| where tostring(Data.created_by_ref) == \"identity--f4a8c3d2-1b9e-4f7a-8c2d-9e3f5b6a7c8d\" or SourceSystem has \"DugganUSA\"\n| summarize arg_max(TimeGenerated, *) by Id\n| summarize Indicators = count(), NewestArrival = max(TimeGenerated), MaxConfidence = max(Confidence)\n    by IndicatorType = tostring(split(ObservableKey, \":\")[0])\n| order by Indicators desc\n",
+        "version": 2,
+        "tags": [
+          {
+            "name": "description",
+            "value": "DugganUSA - What arrived (feed health)"
+          },
+          {
+            "name": "tactics",
+            "value": "CommandAndControl"
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.OperationalInsights/workspaces/savedSearches",
+      "apiVersion": "2020-08-01",
+      "name": "[concat(parameters('workspaceName'), '/dugganusa-ioc-match')]",
+      "properties": {
+        "category": "Hunting Queries",
+        "displayName": "DugganUSA - IOC match (firewall and proxy logs)",
+        "query": "// DugganUSA IOC Match: firewall and proxy logs (CommonSecurityLog) against DugganUSA indicators.\n// Indicators come from the DugganUSA TAXII connector. Sentinel writes TAXII indicators to\n// ThreatIntelIndicators (the older ThreatIntelligenceIndicator table is no longer populated for them).\n// Verified 2026-10-19 in our own Sentinel workspace against a synthetic log row.\nlet dugganusa_identity = \"identity--f4a8c3d2-1b9e-4f7a-8c2d-9e3f5b6a7c8d\";\nlet confidence_floor = 80;   // your dial: lower it for broader coverage\nlet lookback = 1d;\nlet Indicators =\n    ThreatIntelIndicators\n    | where TimeGenerated > ago(14d)\n    | where tostring(Data.created_by_ref) == dugganusa_identity or SourceSystem has \"DugganUSA\"\n    | summarize arg_max(TimeGenerated, *) by Id\n    | where IsDeleted == false and (isempty(ValidUntil) or ValidUntil > now())\n    | where Confidence >= confidence_floor\n    | where ObservableKey in (\"ipv4-addr:value\", \"domain-name:value\", \"url:value\")\n    | project IOC = tolower(tostring(ObservableValue)), ObservableKey, Confidence, IndicatorStixId = tostring(Data.id);\nlet IPs     = Indicators | where ObservableKey == \"ipv4-addr:value\";\nlet Domains = Indicators | where ObservableKey == \"domain-name:value\";\nlet Logs =\n    CommonSecurityLog\n    | where TimeGenerated > ago(lookback)\n    | extend UrlHost = tolower(tostring(parse_url(RequestURL).Host))\n    | project TimeGenerated, DeviceVendor, DeviceProduct, SourceIP, DestinationIP, RequestURL, UrlHost, DeviceAction, Activity;\nunion\n    (Logs | join kind=inner (IPs | project IOC, Confidence, IndicatorStixId) on $left.DestinationIP == $right.IOC | extend MatchedOn = \"destination IP\"),\n    (Logs | join kind=inner (IPs | project IOC, Confidence, IndicatorStixId) on $left.SourceIP == $right.IOC | extend MatchedOn = \"source IP\"),\n    (Logs | where isnotempty(UrlHost) | join kind=inner (Domains | project IOC, Confidence, IndicatorStixId) on $left.UrlHost == $right.IOC | extend MatchedOn = \"URL host\")\n| project TimeGenerated, MatchedOn, IOC, Confidence, IndicatorStixId, SourceIP, DestinationIP, RequestURL, DeviceAction, DeviceVendor, DeviceProduct\n| order by Confidence desc, TimeGenerated desc\n",
+        "version": 2,
+        "tags": [
+          {
+            "name": "description",
+            "value": "DugganUSA - IOC match (firewall and proxy logs)"
+          },
+          {
+            "name": "tactics",
+            "value": "CommandAndControl"
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.OperationalInsights/workspaces/savedSearches",
+      "apiVersion": "2020-08-01",
+      "name": "[concat(parameters('workspaceName'), '/dugganusa-new-c2')]",
+      "properties": {
+        "category": "Hunting Queries",
+        "displayName": "DugganUSA - New C2 in the last 6 hours",
+        "query": "// DugganUSA New C2: connections to command-and-control IPs that arrived in the last 6 hours.\n// Reads ThreatIntelIndicators (see dugganusa-ioc-match.kql). Verified 2026-10-19 against a synthetic log row.\nlet dugganusa_identity = \"identity--f4a8c3d2-1b9e-4f7a-8c2d-9e3f5b6a7c8d\";\nlet NewC2 =\n    ThreatIntelIndicators\n    | where TimeGenerated > ago(6h)\n    | where tostring(Data.created_by_ref) == dugganusa_identity or SourceSystem has \"DugganUSA\"\n    | where ObservableKey == \"ipv4-addr:value\"\n    | extend Types = tostring(Data.indicator_types), Labels = tostring(Data.labels)\n    | where Types has_any (\"botnet_cc\", \"c2\", \"command-and-control\") or Labels has_any (\"botnet_cc\", \"c2\", \"command-and-control\")\n    | summarize arg_max(TimeGenerated, *) by Id\n    | project C2 = tostring(ObservableValue), Confidence, IndicatorName = tostring(Data.name), IndicatorStixId = tostring(Data.id);\nCommonSecurityLog\n| where TimeGenerated > ago(24h)\n| join kind=inner NewC2 on $left.DestinationIP == $right.C2\n| project TimeGenerated, SourceIP, DestinationIP, DestinationPort, DeviceAction, Confidence, IndicatorName, IndicatorStixId\n| order by TimeGenerated desc\n",
+        "version": 2,
+        "tags": [
+          {
+            "name": "description",
+            "value": "DugganUSA - New C2 in the last 6 hours"
+          },
+          {
+            "name": "tactics",
+            "value": "CommandAndControl"
+          }
+        ]
+      }
     }
-  ]
+  ],
+  "outputs": {
+    "next": {
+      "type": "string",
+      "value": "In Sentinel, open Hunting and run 'DugganUSA - What arrived (feed health)' after the first poll."
+    }
+  }
 }

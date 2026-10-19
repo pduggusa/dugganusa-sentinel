@@ -1,0 +1,9 @@
+// DugganUSA: what arrived. Run this after connecting to see the feed is live in your workspace.
+// Counts DugganUSA indicators by type, with their newest arrival and highest confidence (never above 95).
+ThreatIntelIndicators
+| where TimeGenerated > ago(30d)
+| where tostring(Data.created_by_ref) == "identity--f4a8c3d2-1b9e-4f7a-8c2d-9e3f5b6a7c8d" or SourceSystem has "DugganUSA"
+| summarize arg_max(TimeGenerated, *) by Id
+| summarize Indicators = count(), NewestArrival = max(TimeGenerated), MaxConfidence = max(Confidence)
+    by IndicatorType = tostring(split(ObservableKey, ":")[0])
+| order by Indicators desc

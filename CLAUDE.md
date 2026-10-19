@@ -1,6 +1,6 @@
 # CLAUDE.md — dugganusa-sentinel
 
-Microsoft Sentinel solution: a TAXII 2.1 data connector that loads DugganUSA Feed indicators into `ThreatIntelligenceIndicator`, KQL hunting queries, and an optional playbook that reports matches back. Used by Sentinel operators.
+Microsoft Sentinel solution: a TAXII 2.1 data connector that loads DugganUSA Feed indicators into `ThreatIntelIndicators`, KQL hunting queries, and an optional playbook that reports matches back. Used by Sentinel operators.
 
 ## Layout
 
@@ -28,7 +28,7 @@ Microsoft Sentinel solution: a TAXII 2.1 data connector that loads DugganUSA Fee
 
 Base URL `https://analytics.dugganusa.com`, docs at `/docs` (free key at `/stix/register`).
 
-- TAXII 2.1: `/api/v1/stix-feed/taxii2` (collection `dugganusa-threats`).
+- TAXII 2.1 API root: `/api/v1/taxii/` (collection `dugganusa-threat-intel`). The pre-1.4.0 root `/api/v1/stix-feed/taxii2` + `dugganusa-threats` is still served for existing deployments.
 - `GET /api/v1/tor/relays` - used by the Tor relay hunting query.
 - `POST /api/v1/feed/hit` - opt-in match report from the playbook (indicator only).
 

@@ -1,13 +1,29 @@
-// DugganUSA IOC Match — correlate network logs against DugganUSA threat indicators
-// Requires: ThreatIntelligenceIndicator table populated by the DugganUSA TAXII connector
-let dugganusa_iocs = ThreatIntelligenceIndicator
-    | where SourceSystem == "DugganUSA-STIX-Feed"
-    | where Active == true
-    | summarize by NetworkIP, DomainName, FileHashValue;
-
-// Match against CommonSecurityLog (firewall/proxy)
-CommonSecurityLog
-| where TimeGenerated > ago(24h)
-| where DestinationIP in (dugganusa_iocs) or RequestURL has_any (dugganusa_iocs)
-| project TimeGenerated, DeviceVendor, DeviceProduct, SourceIP, DestinationIP, RequestURL, Activity
-| extend ThreatMatch = "DugganUSA IOC Match"
+// DugganUSA IOC Match: firewall and proxy logs (CommonSecurityLog) against DugganUSA indicators.
+// Indicators come from the DugganUSA TAXII connector. Sentinel writes TAXII indicators to
+// ThreatIntelIndicators (the older ThreatIntelligenceIndicator table is no longer populated for them).
+// Verified 2026-10-19 in our own Sentinel workspace against a synthetic log row.
+let dugganusa_identity = "identity--f4a8c3d2-1b9e-4f7a-8c2d-9e3f5b6a7c8d";
+let confidence_floor = 80;   // your dial: lower it for broader coverage
+let lookback = 1d;
+let Indicators =
+    ThreatIntelIndicators
+    | where TimeGenerated > ago(14d)
+    | where tostring(Data.created_by_ref) == dugganusa_identity or SourceSystem has "DugganUSA"
+    | summarize arg_max(TimeGenerated, *) by Id
+    | where IsDeleted == false and (isempty(ValidUntil) or ValidUntil > now())
+    | where Confidence >= confidence_floor
+    | where ObservableKey in ("ipv4-addr:value", "domain-name:value", "url:value")
+    | project IOC = tolower(tostring(ObservableValue)), ObservableKey, Confidence, IndicatorStixId = tostring(Data.id);
+let IPs     = Indicators | where ObservableKey == "ipv4-addr:value";
+let Domains = Indicators | where ObservableKey == "domain-name:value";
+let Logs =
+    CommonSecurityLog
+    | where TimeGenerated > ago(lookback)
+    | extend UrlHost = tolower(tostring(parse_url(RequestURL).Host))
+    | project TimeGenerated, DeviceVendor, DeviceProduct, SourceIP, DestinationIP, RequestURL, UrlHost, DeviceAction, Activity;
+union
+    (Logs | join kind=inner (IPs | project IOC, Confidence, IndicatorStixId) on $left.DestinationIP == $right.IOC | extend MatchedOn = "destination IP"),
+    (Logs | join kind=inner (IPs | project IOC, Confidence, IndicatorStixId) on $left.SourceIP == $right.IOC | extend MatchedOn = "source IP"),
+    (Logs | where isnotempty(UrlHost) | join kind=inner (Domains | project IOC, Confidence, IndicatorStixId) on $left.UrlHost == $right.IOC | extend MatchedOn = "URL host")
+| project TimeGenerated, MatchedOn, IOC, Confidence, IndicatorStixId, SourceIP, DestinationIP, RequestURL, DeviceAction, DeviceVendor, DeviceProduct
+| order by Confidence desc, TimeGenerated desc

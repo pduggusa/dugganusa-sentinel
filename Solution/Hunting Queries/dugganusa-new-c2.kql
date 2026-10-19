@@ -1,10 +1,17 @@
-// DugganUSA New C2 Detection — alert on connections to newly-indexed C2 infrastructure
-ThreatIntelligenceIndicator
-| where SourceSystem == "DugganUSA-STIX-Feed"
-| where TimeGenerated > ago(6h)
-| where ThreatType == "c2"
-| join kind=inner (
-    CommonSecurityLog
-    | where TimeGenerated > ago(24h)
-) on $left.NetworkIP == $right.DestinationIP
-| project TimeGenerated, SourceIP, DestinationIP, ThreatType, Description, Confidence
+// DugganUSA New C2: connections to command-and-control IPs that arrived in the last 6 hours.
+// Reads ThreatIntelIndicators (see dugganusa-ioc-match.kql). Verified 2026-10-19 against a synthetic log row.
+let dugganusa_identity = "identity--f4a8c3d2-1b9e-4f7a-8c2d-9e3f5b6a7c8d";
+let NewC2 =
+    ThreatIntelIndicators
+    | where TimeGenerated > ago(6h)
+    | where tostring(Data.created_by_ref) == dugganusa_identity or SourceSystem has "DugganUSA"
+    | where ObservableKey == "ipv4-addr:value"
+    | extend Types = tostring(Data.indicator_types), Labels = tostring(Data.labels)
+    | where Types has_any ("botnet_cc", "c2", "command-and-control") or Labels has_any ("botnet_cc", "c2", "command-and-control")
+    | summarize arg_max(TimeGenerated, *) by Id
+    | project C2 = tostring(ObservableValue), Confidence, IndicatorName = tostring(Data.name), IndicatorStixId = tostring(Data.id);
+CommonSecurityLog
+| where TimeGenerated > ago(24h)
+| join kind=inner NewC2 on $left.DestinationIP == $right.C2
+| project TimeGenerated, SourceIP, DestinationIP, DestinationPort, DeviceAction, Confidence, IndicatorName, IndicatorStixId
+| order by TimeGenerated desc
