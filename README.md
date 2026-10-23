@@ -1,10 +1,32 @@
 # DugganUSA Microsoft Sentinel Connector
 
+**Docs:** https://docs.dugganusa.com/siem/sentinel/
+
 **You do you. I do me. We share contexts.**
 
 Your Sentinel workspace keeps its data; the connector pulls the DugganUSA Feed over TAXII 2.1 and shares nothing back.
 
 **Ingest the DugganUSA Feed into Microsoft Sentinel via TAXII 2.1. One-click deploy.** Corpus size: [live counts](https://analytics.dugganusa.com/api/v1/search/stats).
+
+## Deploy (one step, two inputs)
+
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fpduggusa%2Fdugganusa-sentinel%2Fmain%2FSolution%2FData%2520Connectors%2Fdugganusa-taxii-connector.json)
+
+You need a workspace with Microsoft Sentinel enabled and a DugganUSA API key ([free](https://analytics.dugganusa.com/stix/register)). Pick the workspace's resource group, type the workspace name, paste the key. That's it. The deployment creates:
+
+- the **Threat intelligence - TAXII** connector for our feed, polling **once a day** and importing the **last 7 days** by default, which fits the free tier (choose hourly with a paid key);
+- three hunting queries under **Hunting**: *What arrived (feed health)*, *IOC match (firewall and proxy logs)* and *New C2 in the last 6 hours*.
+
+After the first poll, open **Hunting** and run **DugganUSA - What arrived (feed health)**. It counts indicators by type with their newest arrival and highest confidence (never above 95).
+
+Prefer the CLI? The key is a `securestring`, so the CLI prompts for it instead of taking it on the command line:
+
+```bash
+az deployment group create \
+  --resource-group YOUR_RG \
+  --template-file "Solution/Data Connectors/dugganusa-taxii-connector.json" \
+  --parameters workspaceName=YOUR_WORKSPACE
+```
 
 ## What's New in 1.4.0 (2026-10-19): verified in a real Sentinel workspace
 
@@ -32,26 +54,6 @@ As a feed consumer, you can report hits to the liveness axis with the included `
 Feed depth also grew with **OSV malicious-package feeds (npm + PyPI)** and **daily GitHub Hunt detections**, drawn from 15 external feed sources plus our own first-hand telemetry.
 
 > **Important:** the TAXII feed is now **API-key-enforced**. Anonymous requests return `401`; unregistered keys return `429`. The free tier is a **free registered key** — [register here](https://analytics.dugganusa.com/stix/register) before deploying.
-
-## Deploy (one step, two inputs)
-
-[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fpduggusa%2Fdugganusa-sentinel%2Fmain%2FSolution%2FData%2520Connectors%2Fdugganusa-taxii-connector.json)
-
-You need a workspace with Microsoft Sentinel enabled and a DugganUSA API key ([free](https://analytics.dugganusa.com/stix/register)). Pick the workspace's resource group, type the workspace name, paste the key. That's it. The deployment creates:
-
-- the **Threat intelligence - TAXII** connector for our feed, polling **once a day** and importing the **last 7 days** by default, which fits the free tier (choose hourly with a paid key);
-- three hunting queries under **Hunting**: *What arrived (feed health)*, *IOC match (firewall and proxy logs)* and *New C2 in the last 6 hours*.
-
-After the first poll, open **Hunting** and run **DugganUSA - What arrived (feed health)**. It counts indicators by type with their newest arrival and highest confidence (never above 95).
-
-Prefer the CLI? The key is a `securestring`, so the CLI prompts for it instead of taking it on the command line:
-
-```bash
-az deployment group create \
-  --resource-group YOUR_RG \
-  --template-file "Solution/Data Connectors/dugganusa-taxii-connector.json" \
-  --parameters workspaceName=YOUR_WORKSPACE
-```
 
 ## What It Does
 
